@@ -9,6 +9,9 @@ WORKDIR /app
 RUN cat /etc/apk/repositories
 # COPY  config/repositories /etc/apk/repositories
 
+# Install composer from the official image
+COPY --from=composer /usr/bin/composer /usr/bin/composer
+
 # Install packages and remove default server definition
 RUN apk update 
 RUN apk upgrade
@@ -44,6 +47,7 @@ RUN apk add --no-cache \
   php7-pear \
   php7-dev \
   php7-pdo_pgsql \
+  php7-phar \
   php7-phpdbg \
   php7-pspell \
   # php7-pecl-mongodb \
@@ -61,13 +65,11 @@ RUN apk add --no-cache \
   # php-mongodb \
   php7-curl \
   supervisor \
-  && curl -fsSL https://deb.nodesource.com/setup_16.x | bash - \
-  && apt-install \
   nodejs \
-  && npm update -g npm \
-  && composer self-update \
-  && docker-run-bootstrap \
-  && docker-image-cleanup
+  npm 
+
+RUN npm update -g npm 
+RUN composer self-update
 
 RUN pecl install mongodb
 
