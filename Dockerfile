@@ -1,7 +1,7 @@
-ARG ALPINE_VERSION=3.12
-FROM alpine:${ALPINE_VERSION}
+ARG IMG_VERSION=8.1-fpm-alpine3.16
+FROM php:${IMG_VERSION}
 LABEL Maintainer="Alessandro Tesi <alextesi@gmail.com>"
-LABEL Description="Lightweight container with Nginx 1.22 & PHP 7 based on Alpine Linux."
+LABEL Description="Lightweight container with Nginx 1.22 & PHP 8 based on Alpine Linux."
 
 
 # Setup document root
@@ -15,7 +15,18 @@ COPY --from=composer /usr/bin/composer /usr/bin/composer
 # Install packages and remove default server definition
 RUN apk update 
 RUN apk upgrade
+RUN apk add --no-cache  --repository http://dl-cdn.alpinelinux.org/alpine/edge/community php
+RUN php -v 
 RUN apk add --no-cache \
+autoconf file g++ gcc binutils isl libatomic libc-dev musl-dev make re2c libstdc++ libgcc mpc1 gmp libgomp \
+      coreutils \
+      freetype-dev \
+      libjpeg-turbo-dev \
+      libltdl \
+      libmcrypt-dev \
+      openssl-dev \
+        icu-dev \
+        ldb-dev libldap openldap-dev \
   vim  mc \
   gcc \
   musl-dev \
@@ -24,55 +35,91 @@ RUN apk add --no-cache \
   curl \
   nginx \
   bash bash-doc bash-completion \
-  php7 \
-  php7-bcmath \
-  php7-bz2 \
-  php7-cgi \
-  php7-cli \
-  php7-common \
-  php7-curl \
-  php7-dba \
-  php7-dev \
-  php7-enchant \
-  php7-fpm \
-  php7-gd \
-  php7-gmp \
-  php7-imap \
-  # php7-interbase \
-  php7-intl \
-  php7-json \
-  php7-ldap \
-  php7-mbstring \
-  php7-pdo_mysql \
-  php7-odbc \
-  php7-opcache \
-  php7-pear \
-  php7-pdo_pgsql \
-  php7-phar \
-  php7-phpdbg \
-  php7-pspell \
-  # php7-pecl-mongodb \
-  # php7-readline \
-  php7-snmp \
-  php7-soap \
-  php7-pdo_sqlite \
-  # php7-sybase \
-  php7-tidy \
-  php7-xml \
-  php7-xmlrpc \
-  php7-xsl \
-  php7-zip \
-  php7-apcu \
-  # php-mongodb \
   supervisor \
   nodejs \
-  npm 
+  bzip2-dev \
+  gmp-dev \
+  libjpeg-turbo-dev \
+  libpng-dev \
+  libxml2-dev \
+  libzip-dev \
+  imap-dev \
+  curl-dev \
+  npm \
+  #&& docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install gd \
+    && docker-php-ext-configure imap --with-imap --with-imap-ssl \
+    && docker-php-ext-install imap
+
+# enable xdebug support
+# RUN pecl install xdebug 
+# RUN docker-php-ext-enable xdebug 
+
+RUN docker-php-ext-install  \
+  bcmath \
+  bz2 \
+  curl \
+  dba \
+  gmp \
+  # interbase \
+  intl \
+  json \
+  ldap \
+  mbstring \
+  pdo_mysql \
+  odbc \
+  opcache \
+  pdo_pgsql \
+  phar \
+  pspell \
+  # readline \
+  snmp \
+  soap \
+  pdo_sqlite \
+  # sybase \
+  tidy \
+  xml \
+  xmlrpc \
+  xsl \
+  zip 
+
+RUN pecl install apcu igbinary mongodb
+RUN docker-php-ext-enable  \
+  bcmath \
+  bz2 \
+  curl \
+  dba \
+  gd \
+  gmp \
+  imap \
+  # interbase \
+  intl \
+  json \
+  ldap \
+  mbstring \
+  pdo_mysql \
+  odbc \
+  opcache \
+  pdo_pgsql \
+  phar \
+  pspell \
+  # readline \
+  snmp \
+  soap \
+  pdo_sqlite \
+  # sybase \
+  tidy \
+  xml \
+  xmlrpc \
+  xsl \
+  zip 
 
 RUN npm update -g npm 
 RUN composer self-update
 
-RUN pecl install mongodb
-
+# Cleaning up the instlalation
+RUN apk del autoconf file g++ gcc binutils isl libatomic libc-dev musl-dev make re2c libstdc++ libgcc binutils-libs mpc1 mpfr3 gmp libgomp \
+    && rm -rf /var/cache/apk/*
 
 # Configure nginx - http
 COPY config/nginx.conf /etc/nginx/nginx.conf
@@ -82,6 +129,8 @@ COPY config/conf.d /etc/nginx/conf.d/
 
 # Configure PHP-FPM
 COPY config/fpm-pool.conf /etc/php/php-fpm.d/www.conf
+COPY config/02_mongodb.ini /etc/php/conf.d/02_mongodb.ini
+
 COPY config/php.ini /etc/php/conf.d/custom.ini
 
 # Configure supervisord
@@ -108,6 +157,7 @@ RUN adduser -D -u ${uid} -G ${group} ${user}
 
 # Expose the port nginx is reachable on
 EXPOSE 80 443
+
 
 # Let supervisord start nginx & php-fpm
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
