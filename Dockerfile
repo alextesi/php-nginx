@@ -129,7 +129,7 @@ COPY config/conf.d /etc/nginx/conf.d/
 
 # Configure PHP-FPM
 COPY config/fpm-pool.conf /etc/php/php-fpm.d/www.conf
-COPY config/02_mongodb.ini /etc/php/conf.d/02_mongodb.ini
+COPY config/02_mongodb.ini /etc/php8.1/conf.d/02_mongodb.ini
 
 COPY config/php.ini /etc/php/conf.d/custom.ini
 
